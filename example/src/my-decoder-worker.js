@@ -1,4 +1,4 @@
-import { AudioDecoderWorker } from 'audio-stream-player';
+import { AudioDecoderWorker } from 'webaudio-stream-player';
 
 class MyDecoderWorker extends AudioDecoderWorker {
   constructor(worker) {

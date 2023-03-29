@@ -153,7 +153,7 @@ export class WaveBuffer {
   write(inputs: Array<WaveArray> | null): void {
     if (inputs == null || inputs.length == 0 || inputs[0] == null) {
       this.isFulFilled = true;
-      console.log(`buffered: ${(this._waves[0]!.byteLength / 1024 / 1024).toFixed(2)}MB`);
+      console.debug(`buffered: ${(this._waves[0]!.byteLength / 1024 / 1024).toFixed(2)}MB`);
     } else {
       const k = Math.min(inputs.length, this._waves.length);
       for (let i = 0; i < k; i++) {

@@ -12,10 +12,8 @@
   "author": "Mitsutaka Okazaki",
   "license": "MIT",
   "devDependencies": {
-    "audio-stream-player": "file:../",
+    "webaudio-stream-player": "file:../",
     "http-server": "^14.1.1",
-    "path-browserify": "^1.0.1",
-    "prettier": "^2.8.4",
     "rm-cli": "^1.4.2",
     "webpack": "^5.76.2",
     "webpack-cli": "^5.0.1",
