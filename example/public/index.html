@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <script>
+  </script>
+</head>
+
+<body>
+  <select id="typesel" onchange="onChangeType(event)">
+    <option value="worklet" selected>Worklet</option>
+    <option value="script">Script</option>
+  </select>
+  <br /><br />
+  <button onclick="play(440, 440 * 1.5)">PLAY L:440Hz R:660Hz Sine</button>&nbsp;
+  <button onclick="play(220, 220 * 1.5)">PLAY L:220Hz R:330Hz Sine</button>&nbsp;
+  <button onclick="stop()">STOP</button>
+  <script type="module">
+    import { MyPlayer } from './js/index.js';
+
+    const audioContext = new AudioContext();
+    const typesel = document.getElementById('typesel');
+    const player = new MyPlayer(typesel.value);
+    player.connect(audioContext.destination);
+
+    window.play = async (leftFreq, rightFreq) => {
+      await audioContext.resume();
+      player.play({ leftFreq, rightFreq });
+    };
+    window.stop = () => { player.abort(); };
+    window.onChangeType = (event) => {
+      player.changeRendererType(event.target.value);
+    };
+
+    // The following is for [Resuming interrupted play states in iOS Safari](https://developer.mozilla.org/en-US/docs/Web/API/BaseAudioContext/state)
+    document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && audioContext.state == 'interrupted') {
+      /* unawaited */audioContext.resume();
+    }
+  });
+  </script>
+</body>
+
+</html>

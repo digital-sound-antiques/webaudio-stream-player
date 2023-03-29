@@ -1,0 +1,27 @@
+{
+  "name": "webaudio-stream-player-example",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "clean": "rm-cli -ss -r dist public/js",
+    "build": "rm-cli -ss -r public/js && webpack",
+    "server": "http-server -c-1 ./public"
+  },
+  "author": "Mitsutaka Okazaki",
+  "license": "MIT",
+  "devDependencies": {
+    "audio-stream-player": "file:../",
+    "http-server": "^14.1.1",
+    "path-browserify": "^1.0.1",
+    "prettier": "^2.8.4",
+    "rm-cli": "^1.4.2",
+    "webpack": "^5.76.2",
+    "webpack-cli": "^5.0.1",
+    "worker-url": "^1.1.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
