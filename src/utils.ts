@@ -12,7 +12,7 @@ export const isSafari = (() => {
 
 export const isChrome = (() => {
   const uad = (navigator as any).userAgentData;
-  if (uad && uad?.brands[0]?.brand == 'Google Chrome') {
+  if (uad && uad?.brands[0]?.brand == "Google Chrome") {
     return true;
   }
   return false;

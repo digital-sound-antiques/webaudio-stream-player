@@ -1,11 +1,13 @@
-import { AudioDecoderWorker } from 'webaudio-stream-player';
+import { AudioDecoderWorker } from "webaudio-stream-player";
 
 class MyDecoderWorker extends AudioDecoderWorker {
   constructor(worker) {
     super(worker);
   }
 
-  async init(args) { /* initialize if needed */ }
+  async init(args) {
+    /* initialize if needed */
+  }
 
   async start(args) {
     this.leftFreq = args.leftFreq || 440.0;
@@ -22,15 +24,19 @@ class MyDecoderWorker extends AudioDecoderWorker {
     for (let i = 0; i < this.sampleRate; i++) {
       for (let c = 0; c < channels.length; c++) {
         const freq = c == 0 ? this.leftFreq : this.rightFreq;
-        channels[c][i] = Math.sin(2 * Math.PI * freq * this.phase / this.sampleRate);
+        channels[c][i] = Math.sin((2 * Math.PI * freq * this.phase) / this.sampleRate);
       }
       this.phase++;
     }
     return channels;
   }
 
-  async abort() { /* something to do when aborted */ }
-  async dispose() { /* dispose resources here */ }
+  async abort() {
+    /* something to do when aborted */
+  }
+  async dispose() {
+    /* dispose resources here */
+  }
 }
 
 const decoder = new MyDecoderWorker(self);

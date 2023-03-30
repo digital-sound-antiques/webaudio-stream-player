@@ -1,5 +1,5 @@
 // Avoid using @types/audioworklet here because it has at least two problems.
-// 1. It conflicts type definitions in DOM library. 
+// 1. It conflicts type definitions in DOM library.
 // 2. Missing options argument of AudioWorkletProcessor.new
 
 import { WaveBuffer } from "../wave-buffer.js";
@@ -7,20 +7,36 @@ import { WaveBuffer } from "../wave-buffer.js";
 // https://github.com/microsoft/TypeScript/issues/28308
 type AudioWorkletProcessorType = {
   readonly port: MessagePort;
-  process(inputs: Float32Array[][], outputs: Float32Array[][], parameters?: Record<string, Float32Array>): boolean;
+  process(
+    inputs: Float32Array[][],
+    outputs: Float32Array[][],
+    parameters?: Record<string, Float32Array>
+  ): boolean;
 };
 
 declare const AudioWorkletProcessor: {
   prototype: AudioWorkletProcessorType;
-  new(options?: AudioWorkletNodeOptions): AudioWorkletProcessorType;
+  new (options?: AudioWorkletNodeOptions): AudioWorkletProcessorType;
 };
 
-type ProcessorCtor = (new (options?: AudioWorkletNodeOptions) => AudioWorkletProcessorType);
+type ProcessorCtor = new (options?: AudioWorkletNodeOptions) => AudioWorkletProcessorType;
 declare function registerProcessor(name: string, ctor: ProcessorCtor): void;
 
-export type AudioRendererWorkletState = 'initial' | 'playing' | 'paused' | 'aborted' | 'stopped' | 'disposed';
+export type AudioRendererWorkletState =
+  | "initial"
+  | "playing"
+  | "paused"
+  | "aborted"
+  | "stopped"
+  | "disposed";
 
-export type AudioRendererWorkletRequestType = 'play' | 'seek' | 'pause' | 'resume' | 'abort' | 'dispose';
+export type AudioRendererWorkletRequestType =
+  | "play"
+  | "seek"
+  | "pause"
+  | "resume"
+  | "abort"
+  | "dispose";
 
 export type AudioRendererWorkletRequest = {
   type: AudioRendererWorkletRequestType;
@@ -29,7 +45,7 @@ export type AudioRendererWorkletRequest = {
   relative?: boolean | null;
 };
 
-export type AudioRendererWorkletRequestWithSeq = { seq: number; } & AudioRendererWorkletRequest;
+export type AudioRendererWorkletRequestWithSeq = { seq: number } & AudioRendererWorkletRequest;
 
 export type AudioRendererWorkletResponse = {
   seq: number;
@@ -58,7 +74,7 @@ export class AudioRendererWorkletProcessor extends AudioWorkletProcessor {
         res = { seq: req.seq, type: req.type, error: e };
       }
       this.port.postMessage(res);
-    }
+    };
     this._buffer = new WaveBuffer(sampleRate, options.outputChannelCount);
   }
 
@@ -74,65 +90,65 @@ export class AudioRendererWorkletProcessor extends AudioWorkletProcessor {
     }
   }
 
-  private _state: AudioRendererWorkletState = 'initial';
+  private _state: AudioRendererWorkletState = "initial";
 
   _setState(state: AudioRendererWorkletState) {
     this._state = state;
-    this.port.postMessage({ type: 'state', state });
+    this.port.postMessage({ type: "state", state });
   }
 
   async _onCommand(cmd: AudioRendererWorkletRequest): Promise<any> {
     switch (cmd.type) {
-      case 'play':
-        if (this._state != 'disposed') {
+      case "play":
+        if (this._state != "disposed") {
           this._reset();
           this._inputPort = cmd.inputPort!;
           this._inputPort!.onmessage = (ev) => this._buffer.write(ev.data);
-          this._setState('playing');
+          this._setState("playing");
         } else {
-          console.error('This object has already been disposed.');
+          console.error("This object has already been disposed.");
         }
         return;
-      case 'pause':
-        if (this._state == 'playing') {
-          this._setState('paused');
+      case "pause":
+        if (this._state == "playing") {
+          this._setState("paused");
         }
         return;
-      case 'seek':
+      case "seek":
         this._buffer.seekTo(cmd.seekPos!, cmd.relative);
-        if (this._state == 'stopped') {
-          this._setState('playing');
+        if (this._state == "stopped") {
+          this._setState("playing");
         }
         return;
-      case 'resume':
-        if (this._state == 'paused') {
-          this._setState('playing');
+      case "resume":
+        if (this._state == "paused") {
+          this._setState("playing");
         }
         return;
-      case 'abort':
+      case "abort":
         this._reset();
-        this._setState('aborted');
+        this._setState("aborted");
         return;
-      case 'dispose':
+      case "dispose":
         this._reset();
         this.port.onmessage = null;
-        this._setState('disposed');
+        this._setState("disposed");
         return;
     }
   }
 
-  process(inputs: Float32Array[][], outputs: Float32Array[][]): boolean {
-    if (this._state == 'disposed') {
+  override process(inputs: Float32Array[][], outputs: Float32Array[][]): boolean {
+    if (this._state == "disposed") {
       return false;
     }
-    if (this._state == 'playing') {
+    if (this._state == "playing") {
       const res = this._buffer.onAudioWorkletProcess(inputs, outputs);
       this.port.postMessage({
-        type: 'progress',
+        type: "progress",
         stat: this._buffer.stat,
       });
       if (!res) {
-        this._setState('stopped');
+        this._setState("stopped");
       }
     }
     return true;

@@ -4,7 +4,7 @@ export type WaveBufferStat = {
   bufferedFrames: number;
   bufferedTime: number;
   isFulFilled: boolean;
-}
+};
 
 export type WaveArray = Float32Array | Int32Array | Int16Array | Int8Array | Uint8Array;
 
@@ -63,7 +63,10 @@ class MonoWaveBuffer {
     }
 
     if (typeof data != typeof this._wave) {
-      throw new Error(`The type of wave sample has changed during playing from ${typeof this._wave} to ${typeof data}.`);
+      throw new Error(
+        `The type of wave sample has changed during playing from ${typeof this
+          ._wave} to ${typeof data}.`
+      );
     }
 
     if (this.wp + data.length > this._wave.length) {
@@ -113,7 +116,6 @@ class MonoWaveBuffer {
 }
 
 export class WaveBuffer {
-
   constructor(sampleRate: number, numberOfChannels: number) {
     this._sampleRate = sampleRate;
     this._waves = Array<MonoWaveBuffer>();
@@ -143,9 +145,9 @@ export class WaveBuffer {
     const bufferedFrames = this._waves[0].wp;
     return {
       currentFrame,
-      currentTime: Math.floor(currentFrame / this._sampleRate * 1000),
+      currentTime: Math.floor((currentFrame / this._sampleRate) * 1000),
       bufferedFrames,
-      bufferedTime: Math.floor(bufferedFrames / this._sampleRate * 1000),
+      bufferedTime: Math.floor((bufferedFrames / this._sampleRate) * 1000),
       isFulFilled: this.isFulFilled,
     };
   }

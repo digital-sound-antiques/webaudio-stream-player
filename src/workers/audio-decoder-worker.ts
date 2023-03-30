@@ -2,7 +2,7 @@ export type AudioDecoderRequest = {
   type: AudioDecoderRequestType;
   outputPort?: MessagePort;
   args?: any;
-}
+};
 
 export type AudioDecoderProgress = {
   decodeFrames: number;
@@ -10,16 +10,16 @@ export type AudioDecoderProgress = {
   isDecoding: boolean;
 };
 
-export type AudioDecoderRequestWithSeq = { seq: number; } & AudioDecoderRequest;
+export type AudioDecoderRequestWithSeq = { seq: number } & AudioDecoderRequest;
 
-export type AudioDecoderRequestType = 'init' | 'start' | 'abort' | 'dispose' | 'unknown';
+export type AudioDecoderRequestType = "init" | "start" | "abort" | "dispose" | "unknown";
 
 export type AudioDecoderResponse = {
   seq: number;
   type: AudioDecoderRequestType;
   error?: any;
   data?: any;
-}
+};
 
 class InternalProcessor<T> {
   constructor(id: any, process: (parent: InternalProcessor<T>) => Promise<T>) {
@@ -48,7 +48,6 @@ class InternalProcessor<T> {
 }
 
 export abstract class AudioDecoderWorker {
-
   constructor(worker: Worker) {
     this._worker = worker;
     this._worker.onmessage = async (e) => {
@@ -61,7 +60,7 @@ export abstract class AudioDecoderWorker {
         res = { seq: req.seq, type: req.type, error: e };
       }
       this._worker.postMessage(res);
-    }
+    };
   }
 
   private _worker: Worker;
@@ -81,17 +80,21 @@ export abstract class AudioDecoderWorker {
   private _sampleRate: number = 44100;
   private _numberOfChannels: number = 2;
 
-  get sampleRate() { return this._sampleRate; }
-  get numberOfChannels() { return this._numberOfChannels; }
+  get sampleRate() {
+    return this._sampleRate;
+  }
+  get numberOfChannels() {
+    return this._numberOfChannels;
+  }
 
   private async _onRequest(req: AudioDecoderRequest): Promise<any> {
     switch (req.type) {
-      case 'init':
+      case "init":
         this._sampleRate = req.args.sampleRate;
         this._numberOfChannels = req.args.numberOfChannels;
         await this.init(req.args);
         break;
-      case 'start':
+      case "start":
         if (this._processor != null) {
           throw new Error(`Already started.`);
         }
@@ -99,12 +102,12 @@ export abstract class AudioDecoderWorker {
         await this.start(req.args);
         this._run();
         return;
-      case 'abort':
+      case "abort":
         await this._abort();
         await this.abort();
         this._detachPort();
         return;
-      case 'dispose':
+      case "dispose":
         await this._abort();
         await this.dispose();
         this._detachPort();
@@ -115,13 +118,14 @@ export abstract class AudioDecoderWorker {
   }
 
   private _dispatchProgress(elapsed: number, decodeFrames: number, isDecoding: boolean) {
-    const decodeSpeed = elapsed != 0 ? (decodeFrames / this.sampleRate * 1000) / elapsed : 0;
+    const decodeSpeed = elapsed != 0 ? ((decodeFrames / this.sampleRate) * 1000) / elapsed : 0;
     this._worker.postMessage({
-      type: 'progress', data: {
+      type: "progress",
+      data: {
         decodeFrames,
         decodeSpeed,
         isDecoding,
-      }
+      },
     });
   }
 

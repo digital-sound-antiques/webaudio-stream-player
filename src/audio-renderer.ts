@@ -1,6 +1,9 @@
 import { isChrome } from "./utils.js";
 import { WaveBuffer } from "./wave-buffer.js";
-import { AudioRendererWorkletRequest, AudioRendererWorkletResponse } from "./workers/audio-renderer-worklet-processor.js";
+import {
+  AudioRendererWorkletRequest,
+  AudioRendererWorkletResponse,
+} from "./workers/audio-renderer-worklet-processor.js";
 
 export interface AudioRendererDelegate {
   readonly state: AudioRendererState;
@@ -17,7 +20,13 @@ export interface AudioRendererDelegate {
   dispose(): Promise<void>;
 }
 
-export type AudioRendererState = 'initial' | 'playing' | 'paused' | 'aborted' | 'stopped' | 'disposed';
+export type AudioRendererState =
+  | "initial"
+  | "playing"
+  | "paused"
+  | "aborted"
+  | "stopped"
+  | "disposed";
 
 export type AudioRendererProgress = {
   currentFrame: number;
@@ -25,22 +34,27 @@ export type AudioRendererProgress = {
   bufferedFrames: number;
   bufferedTime: number;
   isFulFilled: boolean;
-}
+};
 
-export type AudioRendererType = 'script' | 'worklet';
+export type AudioRendererType = "script" | "worklet";
 
 export class AudioRenderer {
   constructor(delegate: AudioRendererDelegate) {
     this._delegate = delegate;
   }
 
-  static create(type: AudioRendererType, context: BaseAudioContext, numberOfChannels: number, workletName?: string | null): AudioRenderer {
-    if (type == 'worklet') {
+  static create(
+    type: AudioRendererType,
+    context: BaseAudioContext,
+    numberOfChannels: number,
+    workletName?: string | null
+  ): AudioRenderer {
+    if (type == "worklet") {
       if (workletName == null) {
         throw new Error(`workletName must be specified.`);
       }
       return new AudioRenderer(new WorkletRenderer(context, numberOfChannels, workletName));
-    } else if (type == 'script') {
+    } else if (type == "script") {
       return new AudioRenderer(new ScriptRenderer(context, numberOfChannels));
     } else {
       throw new Error(`Unspported renderer type: ${type}`);
@@ -49,46 +63,70 @@ export class AudioRenderer {
 
   _delegate: AudioRendererDelegate;
 
-  get state() { return this._delegate.state; };
+  get state() {
+    return this._delegate.state;
+  }
 
-  get onprogress() { return this._delegate.onprogress; }
-  set onprogress(f: ((ev: AudioRendererProgress) => void) | null) { this._delegate.onprogress = f; }
-  get onstatechange() { return this._delegate.onstatechange; }
-  set onstatechange(f: ((ev: AudioRendererState) => void) | null) { this._delegate.onstatechange = f; }
+  get onprogress() {
+    return this._delegate.onprogress;
+  }
+  set onprogress(f: ((ev: AudioRendererProgress) => void) | null) {
+    this._delegate.onprogress = f;
+  }
+  get onstatechange() {
+    return this._delegate.onstatechange;
+  }
+  set onstatechange(f: ((ev: AudioRendererState) => void) | null) {
+    this._delegate.onstatechange = f;
+  }
 
-  connect(destination: AudioNode): void { return this._delegate.connect(destination); }
-  disconnect(): void { return this._delegate.disconnect(); }
-  play(input: MessagePort): Promise<void> { return this._delegate.play(input); }
-  seek(pos: number, relative: boolean = false): Promise<void> { return this._delegate.seek(pos, relative); }
-  pause(): Promise<void> { return this._delegate.pause(); }
-  resume(): Promise<void> { return this._delegate.resume(); }
-  abort(): Promise<void> { return this._delegate.abort(); }
-  dispose(): Promise<void> { return this._delegate.dispose(); }
+  connect(destination: AudioNode): void {
+    return this._delegate.connect(destination);
+  }
+  disconnect(): void {
+    return this._delegate.disconnect();
+  }
+  play(input: MessagePort): Promise<void> {
+    return this._delegate.play(input);
+  }
+  seek(pos: number, relative: boolean = false): Promise<void> {
+    return this._delegate.seek(pos, relative);
+  }
+  pause(): Promise<void> {
+    return this._delegate.pause();
+  }
+  resume(): Promise<void> {
+    return this._delegate.resume();
+  }
+  abort(): Promise<void> {
+    return this._delegate.abort();
+  }
+  dispose(): Promise<void> {
+    return this._delegate.dispose();
+  }
 }
 
 class WorkletRenderer implements AudioRendererDelegate {
   private _node: AudioWorkletNode;
 
-  _state: AudioRendererState = 'initial';
+  _state: AudioRendererState = "initial";
 
   constructor(audioContext: BaseAudioContext, numberOfChannels: number, workletName: string) {
-    this._node = new AudioWorkletNode(
-      audioContext,
-      workletName,
-      {
-        numberOfInputs: 0,
-        numberOfOutputs: 1,
-        outputChannelCount: [numberOfChannels],
-        // parameterData: null,
-        // processorOptions: null,
-      }
-    );
+    this._node = new AudioWorkletNode(audioContext, workletName, {
+      numberOfInputs: 0,
+      numberOfOutputs: 1,
+      outputChannelCount: [numberOfChannels],
+      // parameterData: null,
+      // processorOptions: null,
+    });
     this._numberOfChannels = numberOfChannels;
     this._node.port.onmessage = (ev) => this._handleMessage(ev);
   }
 
   private _numberOfChannels: number;
-  get numberOfChannels() { return this._numberOfChannels; }
+  get numberOfChannels() {
+    return this._numberOfChannels;
+  }
 
   private _seq: number = 0;
 
@@ -106,16 +144,18 @@ class WorkletRenderer implements AudioRendererDelegate {
     }
   }
 
-  get state() { return this._state; }
+  get state() {
+    return this._state;
+  }
 
   _handleMessage(ev: MessageEvent): void {
     switch (ev.data?.type) {
-      case 'progress':
+      case "progress":
         if (this.onprogress != null) {
           this.onprogress({ ...ev.data.stat });
         }
         break;
-      case 'state':
+      case "state":
         this.setState(ev.data?.state);
         break;
     }
@@ -141,57 +181,62 @@ class WorkletRenderer implements AudioRendererDelegate {
         } else {
           reject(e.error!);
         }
-      }
+      };
     });
   }
 
-  connect(destination: AudioNode) { this._node.connect(destination); }
-  disconnect() { this._node.disconnect(); }
+  connect(destination: AudioNode) {
+    this._node.connect(destination);
+  }
+  disconnect() {
+    this._node.disconnect();
+  }
 
   async play(input: MessagePort) {
-    if (this._state == 'playing' || this._state == 'paused') {
-      await this._request({ type: 'abort' });
+    if (this._state == "playing" || this._state == "paused") {
+      await this._request({ type: "abort" });
     }
-    const res = await this._request({ type: 'play', inputPort: input }, [input]);
-    this.setState('playing');
+    const res = await this._request({ type: "play", inputPort: input }, [input]);
+    this.setState("playing");
   }
 
   async seek(pos: number, relative: boolean): Promise<any> {
-    return this._request({ type: 'seek', seekPos: pos, relative });
+    return this._request({ type: "seek", seekPos: pos, relative });
   }
 
   async pause() {
-    if (this._state == 'playing') {
-      const res = await this._request({ type: 'pause' });
-      this.setState('paused');
+    if (this._state == "playing") {
+      const res = await this._request({ type: "pause" });
+      this.setState("paused");
     }
   }
 
   async resume() {
-    if (this._state == 'paused') {
-      const res = await this._request({ type: 'resume' });
-      this.setState('playing');
+    if (this._state == "paused") {
+      const res = await this._request({ type: "resume" });
+      this.setState("playing");
     }
   }
 
   async abort() {
-    if (this._state != 'stopped' && this._state != 'aborted') {
-      const res = await this._request({ type: 'abort' });
-      this.setState('aborted');
+    if (this._state != "stopped" && this._state != "aborted") {
+      const res = await this._request({ type: "abort" });
+      this.setState("aborted");
     }
   }
 
   async dispose(): Promise<void> {
-    await this._request({ type: 'dispose' });
-    this.setState('disposed');
+    await this._request({ type: "dispose" });
+    this.setState("disposed");
     if (isChrome) {
-      console.warn(`StreamerWorkletController.dispose: This operation may cause memory-leak on Chrome since Chrome will not release the AudioWorklet after the tied AudioContext is closed. See: https://bugs.chromium.org/p/chromium/issues/detail?id=1298955`);
+      console.warn(
+        `StreamerWorkletController.dispose: This operation may cause memory-leak on Chrome since Chrome will not release the AudioWorklet after the tied AudioContext is closed. See: https://bugs.chromium.org/p/chromium/issues/detail?id=1298955`
+      );
     }
-  };
+  }
 }
 
 class ScriptRenderer implements AudioRendererDelegate {
-
   constructor(audioContext: BaseAudioContext, numberOfChannels: number) {
     this._node = audioContext.createScriptProcessor(1024, 0, numberOfChannels);
     this._node.onaudioprocess = (ev) => this._onAudioProcess(ev);
@@ -204,11 +249,15 @@ class ScriptRenderer implements AudioRendererDelegate {
   private _inputPort: MessagePort | null = null;
 
   private _numberOfChannels: number;
-  get numberOfChannels() { return this._numberOfChannels; }
+  get numberOfChannels() {
+    return this._numberOfChannels;
+  }
 
-  private _state: AudioRendererState = 'initial';
+  private _state: AudioRendererState = "initial";
 
-  get state() { return this._state; }
+  get state() {
+    return this._state;
+  }
 
   setState(newState: AudioRendererState): void {
     if (this._state != newState) {
@@ -222,8 +271,12 @@ class ScriptRenderer implements AudioRendererDelegate {
   onprogress: ((ev: AudioRendererProgress) => void) | null = null;
   onstatechange: ((ev: AudioRendererState) => void) | null = null;
 
-  connect(destination: AudioNode) { this._node.connect(destination); }
-  disconnect() { this._node.disconnect(); }
+  connect(destination: AudioNode) {
+    this._node.connect(destination);
+  }
+  disconnect() {
+    this._node.disconnect();
+  }
 
   async play(input: MessagePort) {
     if (this._inputPort != null) {
@@ -233,7 +286,7 @@ class ScriptRenderer implements AudioRendererDelegate {
     this._inputPort = input;
     this._inputPort.onmessage = (ev) => this._buffer.write(ev.data);
     this._buffer.clear();
-    this.setState('playing');
+    this.setState("playing");
   }
 
   async seek(pos: number, relative: boolean) {
@@ -241,26 +294,26 @@ class ScriptRenderer implements AudioRendererDelegate {
   }
 
   async pause() {
-    if (this._state == 'playing') {
-      this.setState('paused');
+    if (this._state == "playing") {
+      this.setState("paused");
     }
   }
 
   async resume() {
-    if (this._state == 'paused') {
-      this.setState('playing');
+    if (this._state == "paused") {
+      this.setState("playing");
     }
   }
 
   async abort() {
-    if (this._state == 'playing' || this._state == 'paused') {
+    if (this._state == "playing" || this._state == "paused") {
       this._buffer.clear();
-      this.setState('aborted');
+      this.setState("aborted");
     }
   }
 
   _onAudioProcess(ev: AudioProcessingEvent) {
-    if (this._state == 'playing') {
+    if (this._state == "playing") {
       const res = this._buffer.onAudioProcess(ev);
       if (this.onprogress != null) {
         const stat = this._buffer.stat;
@@ -268,7 +321,7 @@ class ScriptRenderer implements AudioRendererDelegate {
       }
       if (!res) {
         this._buffer.clear();
-        this.setState('stopped');
+        this.setState("stopped");
       }
     }
   }
@@ -280,6 +333,6 @@ class ScriptRenderer implements AudioRendererDelegate {
       this._inputPort = null;
     }
     this._node.onaudioprocess = null;
-    this.setState('disposed');
+    this.setState("disposed");
   }
 }

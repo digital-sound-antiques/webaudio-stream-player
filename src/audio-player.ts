@@ -1,6 +1,6 @@
-import { AudioDecoder } from './audio-decoder.js';
-import { AudioRenderer, AudioRendererProgress, AudioRendererType } from './audio-renderer.js';
-import { AudioDecoderProgress } from './workers/audio-decoder-worker';
+import { AudioDecoder } from "./audio-decoder.js";
+import { AudioRenderer, AudioRendererProgress, AudioRendererType } from "./audio-renderer.js";
+import { AudioDecoderProgress } from "./workers/audio-decoder-worker";
 
 export type AudioPlayerOptions = {
   sampleRate?: number | null;
@@ -10,7 +10,13 @@ export type AudioPlayerOptions = {
   };
 };
 
-export type AudioPlayerState = 'initial' | 'playing' | 'paused' | 'aborted' | 'stopped' | 'disposed';
+export type AudioPlayerState =
+  | "initial"
+  | "playing"
+  | "paused"
+  | "aborted"
+  | "stopped"
+  | "disposed";
 
 export type AudioPlayerProgress = {
   decoder?: AudioDecoderProgress | null;
@@ -18,7 +24,6 @@ export type AudioPlayerProgress = {
 };
 
 export class AudioPlayer {
-
   constructor(args: {
     rendererType: AudioRendererType;
     decoderWorkerUrl: URL;
@@ -41,7 +46,9 @@ export class AudioPlayer {
   private _rendererType: AudioRendererType;
   private _numberOfChannels: number;
 
-  get numberOfChannels() { return this._numberOfChannels; }
+  get numberOfChannels() {
+    return this._numberOfChannels;
+  }
 
   async changeRendererType(type: AudioRendererType) {
     if (this._rendererType != type) {
@@ -57,19 +64,23 @@ export class AudioPlayer {
   private _audioContext: BaseAudioContext | null = null;
   private _destination: AudioNode | null = null;
 
-  private _state: AudioPlayerState = 'initial';
-  get state() { return this._state; }
+  private _state: AudioPlayerState = "initial";
+  get state() {
+    return this._state;
+  }
 
   private _progress: AudioPlayerProgress = {};
 
-  get progress(): AudioPlayerProgress | null { return this._progress; }
+  get progress(): AudioPlayerProgress | null {
+    return this._progress;
+  }
 
   onstatechange: ((state: AudioPlayerState) => void) | null = null;
   onprogress: ((ev: AudioPlayerProgress) => void) | null = null;
 
   connect(destination: AudioNode): void {
     if (!(destination.context instanceof AudioContext)) {
-      throw new Error('destination is not attached to an AudioContext.');
+      throw new Error("destination is not attached to an AudioContext.");
     }
     this._destination = destination;
   }
@@ -85,22 +96,23 @@ export class AudioPlayer {
         await this.dispose();
       }
       this._audioContext = context;
-      if (this._rendererType == 'worklet') {
+      if (this._rendererType == "worklet") {
         await this._audioContext.audioWorklet.addModule(this._rendererWorkletUrl!);
       }
     }
   }
 
   async play(args: any): Promise<void> {
-
     this._progress = {};
 
     const mch = new MessageChannel();
 
     await this._attachContext(this._destination!.context);
 
-    if (this._audioContext?.state == 'suspended') {
-      throw new Error('AudioContext is suspended. `await AudioContext.resume()` in advance within the call stack of a UI event handler.');
+    if (this._audioContext?.state == "suspended") {
+      throw new Error(
+        "AudioContext is suspended. `await AudioContext.resume()` in advance within the call stack of a UI event handler."
+      );
     }
 
     if (this._decoder == null) {
@@ -111,50 +123,55 @@ export class AudioPlayer {
     }
     await this._decoder.start(mch.port2, args);
 
-    this._renderer ??= AudioRenderer.create(this._rendererType, this._audioContext!, this._numberOfChannels, this._rendererWorkletName);
+    this._renderer ??= AudioRenderer.create(
+      this._rendererType,
+      this._audioContext!,
+      this._numberOfChannels,
+      this._rendererWorkletName
+    );
     this._renderer.connect(this._destination!);
     this._renderer.onstatechange = (ev) => {
       this._state = ev;
       if (this.onstatechange != null) {
         this.onstatechange(ev);
       }
-    }
+    };
 
     this._decoder.onprogress = (data) => {
       this._progress.decoder = data;
       if (this.onprogress != null) {
         this.onprogress(this._progress);
       }
-    }
+    };
 
     this._renderer.onprogress = (data) => {
       this._progress.renderer = data;
       if (this.onprogress != null) {
         this.onprogress(this._progress);
       }
-    }
+    };
 
     await this._renderer.play(mch.port1);
   }
 
   async seekInFrame(frame: number, relative: boolean = false): Promise<void> {
-    if (this._state != 'initial' && this._state != 'aborted') {
+    if (this._state != "initial" && this._state != "aborted") {
       await this._renderer?.seek(frame, relative);
     }
   }
 
   async seekInTime(time: number, relative: boolean = false): Promise<void> {
-    if (this._state != 'initial' && this._state != 'aborted') {
-      const pos = Math.floor(this._audioContext!.sampleRate / 1000 * time);
+    if (this._state != "initial" && this._state != "aborted") {
+      const pos = Math.floor((this._audioContext!.sampleRate / 1000) * time);
       await this._renderer?.seek(pos, relative);
     }
   }
 
   async togglePause(): Promise<void> {
-    if (this._state == 'playing') {
+    if (this._state == "playing") {
       return this.pause();
     }
-    if (this._state == 'paused') {
+    if (this._state == "paused") {
       return this.resume();
     }
   }
@@ -199,5 +216,4 @@ export class AudioPlayer {
     }
     this._audioContext = null;
   }
-
 }

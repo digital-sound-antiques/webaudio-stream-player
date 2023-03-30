@@ -1,4 +1,8 @@
-import { AudioDecoderProgress, AudioDecoderRequest, AudioDecoderResponse } from './workers/audio-decoder-worker.js';
+import {
+  AudioDecoderProgress,
+  AudioDecoderRequest,
+  AudioDecoderResponse,
+} from "./workers/audio-decoder-worker.js";
 
 export class AudioDecoder {
   _worker: Worker | null;
@@ -14,8 +18,7 @@ export class AudioDecoder {
   private _completerMap: { [key: number]: (res: AudioDecoderResponse) => void } = {};
 
   private _handleMessage(ev: MessageEvent): void {
-
-    if (ev.data?.type == 'progress') {
+    if (ev.data?.type == "progress") {
       if (this.onprogress != null) {
         this.onprogress(ev.data.data);
       }
@@ -45,25 +48,24 @@ export class AudioDecoder {
         } else {
           reject(e.error!);
         }
-      }
+      };
     });
   }
 
   async init(sampleRate: number, numberOfChannels: number) {
-    await this._request({ type: 'init', args: { sampleRate, numberOfChannels } });
+    await this._request({ type: "init", args: { sampleRate, numberOfChannels } });
   }
 
   async start(outputPort: MessagePort, args?: any) {
-    await this._request({ type: 'start', outputPort, args }, [outputPort]);
+    await this._request({ type: "start", outputPort, args }, [outputPort]);
   }
 
   async abort(): Promise<boolean> {
-    return this._request({ type: 'abort' });
+    return this._request({ type: "abort" });
   }
 
   terminate() {
     this._worker?.terminate();
     this._worker = null;
   }
-
 }
