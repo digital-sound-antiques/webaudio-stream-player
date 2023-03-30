@@ -1,6 +1,6 @@
 import { AudioDecoder } from "./audio-decoder.js";
 import { AudioRenderer, AudioRendererProgress, AudioRendererType } from "./audio-renderer.js";
-import { AudioDecoderProgress } from "./workers/audio-decoder-worker";
+import { AudioDecoderProgress } from "./workers/audio-decoder-worker.js";
 
 export type AudioPlayerOptions = {
   sampleRate?: number | null;
