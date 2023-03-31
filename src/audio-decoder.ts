@@ -5,13 +5,15 @@ import {
 } from "./workers/audio-decoder-worker.js";
 
 export class AudioDecoder {
-  _worker: Worker | null;
-  _seq: number = 0;
-
   constructor(worker: Worker) {
     this._worker = worker;
     this._worker.onmessage = (ev: MessageEvent) => this._handleMessage(ev);
   }
+
+  get worker() { return this._worker; }
+
+  _worker: Worker | null;
+  _seq: number = 0;
 
   onprogress: ((data: AudioDecoderProgress) => void) | null = null;
 
