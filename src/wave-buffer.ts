@@ -126,7 +126,9 @@ export class WaveBuffer {
 
   private _sampleRate: number;
   private _waves: Array<MonoWaveBuffer>;
-  isFulFilled: boolean = false;
+  private _isFulFilled: boolean = false;
+
+  get isFulFilled() { return this._isFulFilled; }
 
   seekTo(frame: number, relative?: boolean | null): void {
     for (const wave of this._waves) {
@@ -138,6 +140,7 @@ export class WaveBuffer {
     for (const wave of this._waves) {
       wave.clear();
     }
+    this._isFulFilled = false;
   }
 
   get stat(): WaveBufferStat {
@@ -148,13 +151,13 @@ export class WaveBuffer {
       currentTime: Math.floor((currentFrame / this._sampleRate) * 1000),
       bufferedFrames,
       bufferedTime: Math.floor((bufferedFrames / this._sampleRate) * 1000),
-      isFulFilled: this.isFulFilled,
+      isFulFilled: this._isFulFilled,
     };
   }
 
   write(inputs: Array<WaveArray> | null): void {
     if (inputs == null || inputs.length == 0 || inputs[0] == null) {
-      this.isFulFilled = true;
+      this._isFulFilled = true;
       console.debug(`buffered: ${(this._waves[0]!.byteLength / 1024 / 1024).toFixed(2)}MB`);
     } else {
       const k = Math.min(inputs.length, this._waves.length);
@@ -169,7 +172,7 @@ export class WaveBuffer {
     for (let i = 0; i < k; i++) {
       this._waves[i].process(channels[i]);
     }
-    if (this.isFulFilled && this._waves[0].rp == this._waves[0].wp) {
+    if (this._isFulFilled && this._waves[0].rp == this._waves[0].wp) {
       return false;
     }
     return true;
