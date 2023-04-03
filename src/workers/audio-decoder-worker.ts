@@ -64,6 +64,8 @@ export abstract class AudioDecoderWorker {
   }
 
   private _worker: Worker;
+  get worker() { return this._worker; }
+  
   private _outputPort: MessagePort | null = null;
 
   private _detachPort() {
