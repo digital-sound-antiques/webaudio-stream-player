@@ -77,6 +77,7 @@ export class AudioPlayer {
 
   onstatechange: ((state: AudioPlayerState) => void) | null = null;
   onprogress: ((ev: AudioPlayerProgress) => void) | null = null;
+  ondecodermessage: ((ev: MessageEvent) => void) | null = null;
 
   connect(destination: AudioNode): void {
     if (!(destination.context instanceof AudioContext)) {
@@ -143,6 +144,7 @@ export class AudioPlayer {
         this.onprogress(this._progress);
       }
     };
+    this._decoder.onmessage = this.ondecodermessage;
 
     this._renderer.onprogress = (data) => {
       this._progress.renderer = data;
