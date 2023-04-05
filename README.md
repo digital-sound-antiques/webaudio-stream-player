@@ -6,7 +6,7 @@ A framework for creating an audio stream player using WebAudio.
 - No SharedArrayBuffer is used so that [cross-origin isolation](https://web.dev/i18n/en/cross-origin-isolation-guide/) is not required.
 
 ## How to Use
-TBD. Example is [here](./example).
+Example is [here](./example).
 
 ### Implement Decoder Worker
 Create `my-decoder-worker.ts` like following. Implement your desired audio decoding procedure in `process` function.
@@ -22,7 +22,7 @@ class MyDecoderWorker extends AudioDecoderWorker {
   }
 
   override async start(args) {
-    /* `args` is through from AudioPlayer.play(args). */
+    /* This is called each time Audio.play(args) calls. */
   }
 
   override async process(): Promise<Array<Uint8Array|Int16Array|Int32Array|Float32Array> | null> {
@@ -120,6 +120,20 @@ export class MyPlayer extends AudioPlayer {
 }
 ```
 
+## Play
+
+```typescript
+const player = new Player();
+const audioContext = new AudioContext();
+player.connect(audioContext.destination);
+
+document.getElementById('some-element').addEventListener('click', async () => {
+  if (audioContext.state != 'running') {
+    await audioContext.resume();
+  }
+  player.play();
+});
+```
 
 ## Note
 This library uses AudioWorklet that is only available in a [secure context](https://w3c.github.io/webappsec-secure-contexts/). 
