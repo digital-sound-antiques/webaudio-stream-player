@@ -12,6 +12,7 @@
   },
   "exclude": [
     "dist",
+    "example",
     "**/__tests__/**/*"
   ]
 }

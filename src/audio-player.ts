@@ -26,21 +26,27 @@ export type AudioPlayerProgress = {
 export class AudioPlayer {
   constructor(args: {
     rendererType: AudioRendererType;
-    decoderWorkerUrl: URL;
+    decoderWorkerUrl?: URL | string | null;
+    decoderWorkerFactory?: (() => Worker) | null;
     recycleDecoder?: boolean | null;
-    rendererWorkletUrl?: URL | null;
+    rendererWorkletUrl?: URL | string | null;
     rendererWorkletName?: string | null;
+    addRendererWorklet?: ((context: BaseAudioContext) => void) | null;
     numberOfChannels: number;
   }) {
     this._rendererType = args.rendererType;
-    this._decoderUrl = args.decoderWorkerUrl;
+    this._decoderWorkerUrl = args.decoderWorkerUrl;
+    this._decoderWorkerFactory = args.decoderWorkerFactory;
     this._rendererWorkletUrl = args.rendererWorkletUrl;
     this._rendererWorkletName = args.rendererWorkletName;
+    this._addRendererWorklet = args.addRendererWorklet;
     this._recycleDecoder = args.recycleDecoder ?? false;
     this._numberOfChannels = args.numberOfChannels;
   }
 
-  private _decoderUrl: URL;
+  private _decoderWorkerFactory?: (() => Worker) | null = null;
+  private _addRendererWorklet?: ((context: BaseAudioContext) => void) | null = null;
+  private _decoderWorkerUrl?: URL | string | null;
   private _decoder: AudioDecoder | null = null;
   private _recycleDecoder: boolean;
   private _rendererType: AudioRendererType;
@@ -57,7 +63,7 @@ export class AudioPlayer {
     }
   }
 
-  private _rendererWorkletUrl?: URL | null;
+  private _rendererWorkletUrl?: URL | string | null;
   private _rendererWorkletName?: string | null;
   private _renderer: AudioRenderer | null = null;
 
@@ -98,7 +104,13 @@ export class AudioPlayer {
       }
       this._audioContext = context;
       if (this._rendererType == "worklet") {
-        await this._audioContext.audioWorklet.addModule(this._rendererWorkletUrl!);
+        if (this._addRendererWorklet != null) {
+          this._addRendererWorklet(this._audioContext!);
+        } else if (this._rendererWorkletUrl != null) {
+          await this._audioContext.audioWorklet.addModule(this._rendererWorkletUrl);
+        } else {
+          throw new Error("Either addRendererWorklet or rendererWorkletUrl is required.");
+        }
       }
     }
   }
@@ -117,7 +129,13 @@ export class AudioPlayer {
     }
 
     if (this._decoder == null) {
-      this._decoder = new AudioDecoder(new Worker(this._decoderUrl));
+      if (this._decoderWorkerFactory != null) {
+        this._decoder = new AudioDecoder(this._decoderWorkerFactory());
+      } else if (this._decoderWorkerUrl != null) {
+        this._decoder = new AudioDecoder(new Worker(this._decoderWorkerUrl));
+      } else {
+        throw new Error("Either decoderWorkerFactoty or decoderWorkerUrl is required.");
+      }
       await this._decoder.init(this._audioContext!.sampleRate, this._numberOfChannels);
     } else {
       await this._decoder.abort();
