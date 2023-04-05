@@ -69,7 +69,7 @@ runAudioWorklet('renderer', AudioRendererWorkletProcessor);
 ```
 
 ### Create Player
-#### for Vite
+#### with Vite
 
 ```typescript
 import { AudioPlayer } from "webaudio-stream-player";
@@ -93,7 +93,7 @@ export class MyPlayer extends AudioPlayer {
 }
 ```
 
-#### for Webpack
+#### with Webpack
 
 This library assumes the use of Webpack with [WorkerUrl](https://github.com/popelenkow/worker-url) plugin.
 A typical Webpack configuration is [./example/webpack.config.js](./example/webpack.config.js).
