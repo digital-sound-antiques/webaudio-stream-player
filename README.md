@@ -6,22 +6,24 @@ A framework for creating an audio stream player using WebAudio.
 - No SharedArrayBuffer is used so that [cross-origin isolation](https://web.dev/i18n/en/cross-origin-isolation-guide/) is not required.
 
 ## How to Use
-Example is [here](./example).
+See also: [./example](./example).
 
 ### Implement Decoder Worker
 Create `my-decoder-worker.ts` like following. Implement your desired audio decoding procedure in `process` function.
 
 ```typescript
+import { AudioDecoderWorker } from 'webaudio-stream-player';
+
 class MyDecoderWorker extends AudioDecoderWorker {
-  constructor(worker) {
+  constructor(worker: Worker) {
     super(worker);
   }
 
-  override async init(args) {
+  override async init(args: any) {
     /* initialize if needed */
   }
 
-  override async start(args) {
+  override async start(args: any) {
     /* This is called each time Audio.play(args) calls. */
   }
 
@@ -37,12 +39,13 @@ class MyDecoderWorker extends AudioDecoderWorker {
      * It is recommended to return this method after an appropriate size of wave is generated. 
      */
     const channels = [];
+    const leftFreq = 440.0, rightFreq = 660.0;
     for (let c = 0; c < this.numberOfChannels; c++) {
       channels.push(new Float32Array(this.sampleRate));
     }
     for (let i = 0; i < this.sampleRate; i++) {
       for (let c = 0; c < channels.length; c++) {
-        const freq = c == 0 ? this.leftFreq : this.rightFreq;
+        const freq = c == 0 ? leftFreq : rightFreq;
         channels[c][i] = Math.sin((2 * Math.PI * freq * this.phase) / this.sampleRate);
       }
       this.phase++;
@@ -55,12 +58,14 @@ class MyDecoderWorker extends AudioDecoderWorker {
   }
 }
 
-const decoder = new MyDecoderWorker(self);
+const decoder = new MyDecoderWorker(self as Worker);
 ```
 
 ### Implement Renderer Worklet Processor
 
 Save the following code as `my-renderer-worklet.ts`. No modification is required.
+Note that `webaudio-stream-player/dist/workers/audio-renderer-worklet-processor.js` must be imported as the absolute path.
+This is a workaround to prevent Webpack from referencing variables that do not exist in the AudioWorkletGlobalScope.
 
 ```typescript
 import { runAudioWorklet, AudioRendererWorkletProcessor } from "webaudio-stream-player/dist/workers/audio-renderer-worklet-processor.js";
@@ -79,9 +84,9 @@ import { AudioPlayer } from "webaudio-stream-player";
 import workletUrl from "./my-renderer-worklet.ts?worker&url";
 
 export class MyPlayer extends AudioPlayer {
-  constructor(rendererType) {
+  constructor(rendererType: "script" | "worklet") {
     super({
-      rendererType: rendererType ?? "worklet",
+      rendererType: rendererType,
       decoderWorkerFactory: () => {
         return new Worker(new URL("./my-decoder-worker.ts", import.meta.url), { type: "module" });
       },
@@ -95,7 +100,7 @@ export class MyPlayer extends AudioPlayer {
 
 #### with Webpack
 
-This library assumes the use of Webpack with [WorkerUrl](https://github.com/popelenkow/worker-url) plugin.
+[WorkerUrl](https://github.com/popelenkow/worker-url) plugin is required.
 A typical Webpack configuration is [./example/webpack.config.js](./example/webpack.config.js).
 
 ```typescript
@@ -108,9 +113,9 @@ const decoderUrl = new WorkerUrl(new URL("./my-decoder-worker.js", import.meta.u
 const workletUrl = new WorkerUrl(new URL("./my-renderer-worklet.js", import.meta.url), { name: "renderer" });
 
 export class MyPlayer extends AudioPlayer {
-  constructor(rendererType) {
+  constructor(rendererType: "script" | "worklet") {
     super({
-      rendererType: rendererType ?? "worklet",
+      rendererType: rendererType,
       decoderWorkerUrl: decoderUrl,
       rendererWorkletUrl: workletUrl,
       rendererWorkletName: "renderer",
@@ -123,7 +128,7 @@ export class MyPlayer extends AudioPlayer {
 ## Play
 
 ```typescript
-const player = new Player();
+const player = new MyPlayer("worklet");
 const audioContext = new AudioContext();
 player.connect(audioContext.destination);
 
