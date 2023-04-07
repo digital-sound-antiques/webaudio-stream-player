@@ -1,5 +1,10 @@
 import { AudioDecoder } from "./audio-decoder.js";
-import { AudioRenderer, AudioRendererProgress, AudioRendererType } from "./audio-renderer.js";
+import {
+  AudioRenderer,
+  AudioRendererProgress,
+  AudioRendererState,
+  AudioRendererType,
+} from "./audio-renderer.js";
 import { AudioDecoderProgress } from "./workers/audio-decoder-worker.js";
 
 export type AudioPlayerOptions = {
@@ -19,9 +24,30 @@ export type AudioPlayerState =
   | "disposed";
 
 export type AudioPlayerProgress = {
-  decoder?: AudioDecoderProgress | null;
-  renderer?: AudioRendererProgress | null;
+  decoder: AudioDecoderProgress;
+  renderer: AudioRendererProgress;
 };
+
+const emptyProgress = {
+  decoder: {
+    decodeFrames: 0,
+    decodeSpeed: 0,
+    isDecoding: false,
+  },
+  renderer: {
+    currentFrame: 0,
+    currentTime: 0,
+    bufferedFrames: 0,
+    bufferedTime: 0,
+    isFulFilled: false,
+  },
+};
+
+interface AudioPlayerEventDetailTypeMap {
+  progress: AudioPlayerProgress;
+  statechange: AudioPlayerState;
+  decodermessage: any;
+}
 
 export class AudioPlayer {
   constructor(args: {
@@ -52,6 +78,8 @@ export class AudioPlayer {
   private _rendererType: AudioRendererType;
   private _numberOfChannels: number;
 
+  private _eventDispatcher = new EventTarget();
+
   get numberOfChannels() {
     return this._numberOfChannels;
   }
@@ -75,15 +103,15 @@ export class AudioPlayer {
     return this._state;
   }
 
-  private _progress: AudioPlayerProgress = {};
+  private _progress: AudioPlayerProgress = emptyProgress;
 
-  get progress(): AudioPlayerProgress | null {
+  get progress(): AudioPlayerProgress {
     return this._progress;
   }
 
-  onstatechange: ((state: AudioPlayerState) => void) | null = null;
-  onprogress: ((ev: AudioPlayerProgress) => void) | null = null;
-  ondecodermessage: ((ev: MessageEvent) => void) | null = null;
+  // onstatechange: ((state: AudioPlayerState) => void) | null = null;
+  // onprogress: ((ev: AudioPlayerProgress) => void) | null = null;
+  // ondecodermessage: ((ev: MessageEvent) => void) | null = null;
 
   connect(destination: AudioNode): void {
     if (!(destination.context instanceof AudioContext)) {
@@ -95,6 +123,30 @@ export class AudioPlayer {
   disconnect(): Promise<void> {
     this._destination = null;
     return this.dispose();
+  }
+
+  addEventListener<T extends keyof AudioPlayerEventDetailTypeMap>(
+    type: T,
+    callback: (ev: CustomEvent<AudioPlayerEventDetailTypeMap[T]>) => void | null,
+    options?: boolean | AddEventListenerOptions
+  ) {
+    this._eventDispatcher.addEventListener(type, callback as any, options);
+  }
+
+  dispatchEvent(ev: Event): boolean {
+    return this._eventDispatcher.dispatchEvent(ev);
+  }
+
+  removeEventListener<T extends keyof AudioPlayerEventDetailTypeMap>(
+    type: T,
+    callback: (ev: CustomEvent<AudioPlayerEventDetailTypeMap[T]>) => void | null,
+    options?: boolean | EventListenerOptions
+  ) {
+    this._eventDispatcher.removeEventListener(type, callback as any, options);
+  }
+
+  _createCustomEvent<T extends keyof AudioPlayerEventDetailTypeMap>(type: T, eventInitDict?: CustomEventInit<AudioPlayerEventDetailTypeMap[T]>) {
+    return new CustomEvent(type, eventInitDict);
   }
 
   async _attachContext(context: BaseAudioContext): Promise<void> {
@@ -115,8 +167,27 @@ export class AudioPlayer {
     }
   }
 
+  private _onRendererStateChange = ((ev: CustomEvent<AudioRendererState>): void => {
+    this._state = ev.detail;
+    this.dispatchEvent(this._createCustomEvent("statechange", { detail: ev.detail }));
+  }) as EventListener;
+
+  private _onRendererProgress = ((ev: CustomEvent<AudioRendererProgress>): void => {
+    (this._progress = { ...this._progress, renderer: ev.detail }),
+      this.dispatchEvent(this._createCustomEvent("progress", { detail: this._progress }));
+  }) as EventListener;
+
+  private _onDecoderProgress = ((ev: CustomEvent<AudioDecoderProgress>): void => {
+    (this._progress = { ...this._progress, decoder: ev.detail }),
+      this.dispatchEvent(this._createCustomEvent("progress", { detail: this._progress }));
+  }) as EventListener;
+
+  private _onDecoderMessage = ((ev: CustomEvent<any>): void => {
+    this.dispatchEvent(this._createCustomEvent("decodermessage", { detail: ev.detail }));
+  }) as EventListener;
+
   async play(args: any): Promise<void> {
-    this._progress = {};
+    this._progress = emptyProgress;
 
     const mch = new MessageChannel();
 
@@ -137,39 +208,25 @@ export class AudioPlayer {
         throw new Error("Either decoderWorkerFactoty or decoderWorkerUrl is required.");
       }
       await this._decoder.init(this._audioContext!.sampleRate, this._numberOfChannels);
+      this._decoder.addEventListener("decodermessage", this._onDecoderMessage);
     } else {
       await this._decoder.abort();
     }
+
+    this._decoder.addEventListener("progress", this._onDecoderProgress);
     await this._decoder.start(mch.port2, args);
 
-    this._renderer ??= AudioRenderer.create(
-      this._rendererType,
-      this._audioContext!,
-      this._numberOfChannels,
-      this._rendererWorkletName
-    );
+    if (this._renderer == null) {
+      this._renderer = AudioRenderer.create(
+        this._rendererType,
+        this._audioContext!,
+        this._numberOfChannels,
+        this._rendererWorkletName
+      );
+      this._renderer.addEventListener("statechange", this._onRendererStateChange);
+    }
     this._renderer.connect(this._destination!);
-    this._renderer.onstatechange = (ev) => {
-      this._state = ev;
-      if (this.onstatechange != null) {
-        this.onstatechange(ev);
-      }
-    };
-
-    this._decoder.onprogress = (data) => {
-      this._progress.decoder = data;
-      if (this.onprogress != null) {
-        this.onprogress(this._progress);
-      }
-    };
-    this._decoder.onmessage = this.ondecodermessage;
-
-    this._renderer.onprogress = (data) => {
-      this._progress.renderer = data;
-      if (this.onprogress != null) {
-        this.onprogress(this._progress);
-      }
-    };
+    this._renderer.addEventListener("progress", this._onRendererProgress);
 
     await this._renderer.play(mch.port1);
   }
@@ -207,15 +264,16 @@ export class AudioPlayer {
   async abort(): Promise<void> {
     if (this._decoder != null) {
       await this._decoder.abort();
-      this._decoder.onprogress = null;
+      this._decoder.removeEventListener("progress", this._onDecoderProgress);
       if (!this._recycleDecoder) {
         this._decoder.terminate();
+        this._decoder.removeEventListener("message", this._onDecoderMessage);
         this._decoder = null;
       }
     }
     if (this._renderer != null) {
       this._renderer.disconnect();
-      this._renderer.onprogress = null;
+      this._renderer.removeEventListener("progress", this._onRendererStateChange);
       await this._renderer.abort();
     }
   }
@@ -223,14 +281,15 @@ export class AudioPlayer {
   async dispose(): Promise<void> {
     if (this._decoder != null) {
       await this._decoder?.abort();
-      this._decoder.onprogress = null;
+      this._decoder.removeEventListener("progress", this._onDecoderProgress);
+      this._decoder.removeEventListener("message", this._onDecoderMessage);
       this._decoder.terminate();
       this._decoder = null;
     }
     if (this._renderer != null) {
       this._renderer.disconnect();
-      this._renderer.onprogress = null;
-      this._renderer.onstatechange = null;
+      this._renderer.removeEventListener("progress", this._onRendererProgress);
+      this._renderer.removeEventListener("statechange", this._onRendererStateChange);
       await this._renderer.dispose();
       this._renderer = null;
     }

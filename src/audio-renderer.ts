@@ -38,9 +38,16 @@ export type AudioRendererProgress = {
 
 export type AudioRendererType = "script" | "worklet";
 
-export class AudioRenderer {
+export class AudioRenderer extends EventTarget {
   constructor(delegate: AudioRendererDelegate) {
+    super();
     this._delegate = delegate;
+    this._delegate.onprogress = (ev) => {
+      this.dispatchEvent(new CustomEvent<AudioRendererProgress>("progress", { detail: ev }));
+    };
+    this._delegate.onstatechange = (ev) => {
+      this.dispatchEvent(new CustomEvent<AudioRendererState>("statechange", { detail: ev }));
+    };
   }
 
   static create(
@@ -65,19 +72,6 @@ export class AudioRenderer {
 
   get state() {
     return this._delegate.state;
-  }
-
-  get onprogress() {
-    return this._delegate.onprogress;
-  }
-  set onprogress(f: ((ev: AudioRendererProgress) => void) | null) {
-    this._delegate.onprogress = f;
-  }
-  get onstatechange() {
-    return this._delegate.onstatechange;
-  }
-  set onstatechange(f: ((ev: AudioRendererState) => void) | null) {
-    this._delegate.onstatechange = f;
   }
 
   connect(destination: AudioNode): void {

@@ -1,5 +1,4 @@
 import {
-  AudioDecoderProgress,
   AudioDecoderRequest,
   AudioDecoderResponse,
 } from "./workers/audio-decoder-worker.js";
@@ -18,16 +17,11 @@ export class AudioDecoder extends EventTarget {
   _worker: Worker | null;
   _seq: number = 0;
 
-  onprogress: ((data: AudioDecoderProgress) => void) | null = null;
-  onmessage: ((ev: MessageEvent) => void) | null = null;
-
   private _completerMap: { [key: number]: (res: AudioDecoderResponse) => void } = {};
 
   private _handleMessage(ev: MessageEvent) {
     if (ev.data?.type == "progress") {
-      if (this.onprogress != null) {
-        this.onprogress(ev.data.data);
-      }
+      this.dispatchEvent(new CustomEvent("progress", { detail: ev.data }));
       return;
     }
 
@@ -39,7 +33,7 @@ export class AudioDecoder extends EventTarget {
       return;
     }
 
-    if (this.onmessage) this.onmessage(ev);
+    this.dispatchEvent(new CustomEvent("decodermessage", { detail: ev.data }));
   }
 
   private _request(req: AudioDecoderRequest, transfer: Transferable[] = []): Promise<any> {
