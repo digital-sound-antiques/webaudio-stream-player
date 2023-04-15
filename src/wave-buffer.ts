@@ -8,7 +8,7 @@ export type WaveBufferStat = {
 
 export type WaveArray = Float32Array | Int32Array | Int16Array | Int8Array | Uint8Array;
 
-function createSameTypeBuffer(prot: WaveArray, length: number): WaveArray {
+export function createSameTypeBuffer(prot: WaveArray, length: number): WaveArray {
   if (prot instanceof Float32Array) {
     return new Float32Array(length);
   } else if (prot instanceof Int32Array) {
@@ -24,13 +24,15 @@ function createSameTypeBuffer(prot: WaveArray, length: number): WaveArray {
   }
 }
 
-class MonoWaveBuffer {
+export class MonoWaveBuffer {
   constructor(initialLength: number) {
     this._initialLength = initialLength;
   }
 
   private _initialLength: number;
   private _wave: WaveArray | null = null;
+
+  get wave(): WaveArray | null { return this._wave; }
 
   rp = 0;
   wp = 0;
