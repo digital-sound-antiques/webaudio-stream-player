@@ -96,6 +96,17 @@ export class AudioPlayer {
   private _renderer: AudioRenderer | null = null;
 
   private _audioContext: BaseAudioContext | null = null;
+  get audioContext() {
+    return this._audioContext;
+  }
+
+  get outputLatency(): number {
+    if (this._audioContext instanceof AudioContext) {
+      return this._audioContext.outputLatency ?? 0.0;
+    }
+    return 0.0;
+  }
+
   private _destination: AudioNode | null = null;
 
   private _state: AudioPlayerState = "initial";
@@ -276,6 +287,8 @@ export class AudioPlayer {
       this._renderer.removeEventListener("progress", this._onRendererStateChange);
       await this._renderer.abort();
     }
+    this._progress = emptyProgress;
+    this.dispatchEvent(this._createCustomEvent("progress", { detail: this._progress }));
   }
 
   async dispose(): Promise<void> {
