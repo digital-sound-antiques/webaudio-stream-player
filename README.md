@@ -2,7 +2,7 @@
 
 A framework for creating an audio stream player using WebAudio. 
 
-- Both AudioWorkletNote and ScriptProcessorNode are supported. 
+- Both AudioWorkletNode and ScriptProcessorNode are supported. 
 - No SharedArrayBuffer is used so that [cross-origin isolation](https://web.dev/i18n/en/cross-origin-isolation-guide/) is not required.
 
 ## How to Use
