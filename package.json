@@ -1,6 +1,6 @@
 {
   "name": "webaudio-stream-player",
-  "version": "0.9.0",
+  "version": "1.0.1",
   "description": "A framework for creating an audio stream player using WebAudio. Both AudioWorkletNote and ScriptProcessorNode are supported.",
   "type": "module",
   "main": "dist/index.js",
@@ -28,5 +28,9 @@
     "rimraf": "^4.4.1",
     "typedoc": "^0.23.28",
     "typescript": "^4.9.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/digital-sound-antiques/webaudio-stream-player"
   }
 }
