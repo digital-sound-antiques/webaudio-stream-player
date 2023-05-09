@@ -242,13 +242,13 @@ export class AudioPlayer {
     await this._renderer.play(mch.port1);
   }
 
-  async seekInFrame(frame: number, relative: boolean = false): Promise<void> {
+  async seekInFrame(frame: number, relative = false): Promise<void> {
     if (this._state != "initial" && this._state != "aborted") {
       await this._renderer?.seek(frame, relative);
     }
   }
 
-  async seekInTime(time: number, relative: boolean = false): Promise<void> {
+  async seekInTime(time: number, relative = false): Promise<void> {
     if (this._state != "initial" && this._state != "aborted") {
       const pos = Math.floor((this._audioContext!.sampleRate / 1000) * time);
       await this._renderer?.seek(pos, relative);
@@ -270,6 +270,20 @@ export class AudioPlayer {
 
   async resume(): Promise<void> {
     await this._renderer?.resume();
+  }
+
+  /// kill hung-up decoder
+  async emergencyReset(): Promise<void> {
+    this._decoder?.removeEventListener("message", this._onDecoderMessage);
+    this._decoder?.terminate();
+    this._decoder = null;
+    if (this._renderer != null) {
+      this._renderer.disconnect();
+      this._renderer.removeEventListener("progress", this._onRendererStateChange);
+      await this._renderer.abort();
+    }
+    this._progress = emptyProgress;
+    this.dispatchEvent(this._createCustomEvent("progress", { detail: this._progress }));
   }
 
   async abort(): Promise<void> {

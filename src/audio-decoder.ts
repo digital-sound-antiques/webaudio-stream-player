@@ -15,7 +15,7 @@ export class AudioDecoder extends EventTarget {
   }
 
   _worker: Worker | null;
-  _seq: number = 0;
+  _seq = 0;
 
   private _completerMap: { [key: number]: (res: AudioDecoderResponse) => void } = {};
 

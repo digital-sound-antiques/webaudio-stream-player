@@ -83,7 +83,7 @@ export class AudioRenderer extends EventTarget {
   play(input: MessagePort): Promise<void> {
     return this._delegate.play(input);
   }
-  seek(pos: number, relative: boolean = false): Promise<void> {
+  seek(pos: number, relative = false): Promise<void> {
     return this._delegate.seek(pos, relative);
   }
   pause(): Promise<void> {
@@ -122,7 +122,7 @@ class WorkletRenderer implements AudioRendererDelegate {
     return this._numberOfChannels;
   }
 
-  private _seq: number = 0;
+  private _seq = 0;
 
   private _completerMap: { [key: number]: (res: AudioRendererWorkletResponse) => void } = {};
 
@@ -162,7 +162,7 @@ class WorkletRenderer implements AudioRendererDelegate {
     }
   }
 
-  private _request(req: AudioRendererWorkletRequest, transfer: Transferable[] = []): Promise<any> {
+  private _request(req: AudioRendererWorkletRequest, transfer: Transferable[] = []): Promise<unknown> {
     const seq = this._seq++;
     this._node.port.postMessage({ seq, ...req }, transfer);
     // const start = Date.now();
@@ -173,7 +173,7 @@ class WorkletRenderer implements AudioRendererDelegate {
         if (e.error == null) {
           resolve(e.data);
         } else {
-          reject(e.error!);
+          reject(e.error);
         }
       };
     });
@@ -190,7 +190,7 @@ class WorkletRenderer implements AudioRendererDelegate {
     if (this._state == "playing" || this._state == "paused") {
       await this._request({ type: "abort" });
     }
-    const res = await this._request({ type: "play", inputPort: input }, [input]);
+    await this._request({ type: "play", inputPort: input }, [input]);
     this.setState("playing");
   }
 
@@ -200,21 +200,21 @@ class WorkletRenderer implements AudioRendererDelegate {
 
   async pause() {
     if (this._state == "playing") {
-      const res = await this._request({ type: "pause" });
+      await this._request({ type: "pause" });
       this.setState("paused");
     }
   }
 
   async resume() {
     if (this._state == "paused") {
-      const res = await this._request({ type: "resume" });
+      await this._request({ type: "resume" });
       this.setState("playing");
     }
   }
 
   async abort() {
     if (this._state != "stopped" && this._state != "aborted") {
-      const res = await this._request({ type: "abort" });
+      await this._request({ type: "abort" });
       this.setState("aborted");
     }
   }
