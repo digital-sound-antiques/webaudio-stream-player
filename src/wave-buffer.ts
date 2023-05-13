@@ -32,7 +32,9 @@ export class MonoWaveBuffer {
   private _initialLength: number;
   private _wave: WaveArray | null = null;
 
-  get wave(): WaveArray | null { return this._wave; }
+  get wave(): WaveArray | null {
+    return this._wave;
+  }
 
   rp = 0;
   wp = 0;
@@ -84,32 +86,47 @@ export class MonoWaveBuffer {
     if (this._wave instanceof Float32Array) {
       for (let i = 0; i < output.length; i++) {
         if (this.rp < this.wp) {
-          output[i] = this._wave[this.rp++];
+          output[i] = this._wave[this.rp];
+        } else {
+          output[i] = 0;
         }
+        this.rp++;
       }
     } else if (this._wave instanceof Int32Array) {
       for (let i = 0; i < output.length; i++) {
         if (this.rp < this.wp) {
-          output[i] = this._wave[this.rp++] / (1 << 31);
+          output[i] = this._wave[this.rp] / (1 << 31);
+        } else {
+          output[i] = 0;
         }
+        this.rp++;
       }
     } else if (this._wave instanceof Int16Array) {
       for (let i = 0; i < output.length; i++) {
         if (this.rp < this.wp) {
-          output[i] = this._wave[this.rp++] / (1 << 15);
+          output[i] = this._wave[this.rp] / (1 << 15);
+        } else {
+          output[i] = 0;
         }
+        this.rp++;
       }
     } else if (this._wave instanceof Int8Array) {
       for (let i = 0; i < output.length; i++) {
         if (this.rp < this.wp) {
-          output[i] = this._wave[this.rp++] / (1 << 7);
+          output[i] = this._wave[this.rp] / (1 << 7);
+        } else {
+          output[i] = 0;
         }
+        this.rp++;
       }
     } else if (this._wave instanceof Uint8Array) {
       for (let i = 0; i < output.length; i++) {
         if (this.rp < this.wp) {
-          output[i] = (this._wave[this.rp++] - 128) / (1 << 7);
+          output[i] = (this._wave[this.rp] - 128) / (1 << 7);
+        } else {
+          output[i] = 0;
         }
+        this.rp++;
       }
     } else {
       // do nothing
@@ -128,9 +145,14 @@ export class WaveBuffer {
 
   private _sampleRate: number;
   private _waves: Array<MonoWaveBuffer>;
-  private _isFulFilled: boolean = false;
+  private _isFulFilled = false;
 
-  get isFulFilled() { return this._isFulFilled; }
+  get sampleRate() {
+    return this._sampleRate;
+  }
+  get isFulFilled() {
+    return this._isFulFilled;
+  }
 
   seekTo(frame: number, relative?: boolean | null): void {
     for (const wave of this._waves) {
@@ -174,7 +196,7 @@ export class WaveBuffer {
     for (let i = 0; i < k; i++) {
       this._waves[i].process(channels[i]);
     }
-    if (this._isFulFilled && this._waves[0].rp == this._waves[0].wp) {
+    if (this._isFulFilled && this._waves[0].rp >= this._waves[0].wp) {
       return false;
     }
     return true;

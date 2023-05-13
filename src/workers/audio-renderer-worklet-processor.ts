@@ -1,9 +1,8 @@
+import { WaveBuffer } from "../wave-buffer.js";
+
 // Avoid using @types/audioworklet here because it has at least two problems.
 // 1. It conflicts type definitions in DOM library.
 // 2. Missing options argument of AudioWorkletProcessor.new
-
-import { WaveBuffer } from "../wave-buffer.js";
-
 // https://github.com/microsoft/TypeScript/issues/28308
 type AudioWorkletProcessorType = {
   readonly port: MessagePort;
@@ -50,7 +49,9 @@ export type AudioRendererWorkletRequestWithSeq = { seq: number } & AudioRenderer
 export type AudioRendererWorkletResponse = {
   seq: number;
   type: AudioRendererWorkletRequestType;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data?: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   error?: any;
 };
 
@@ -62,6 +63,7 @@ export class AudioRendererWorkletProcessor extends AudioWorkletProcessor {
     return [];
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   constructor(options: any) {
     super(options);
     this.port.onmessage = async (ev) => {
@@ -97,13 +99,16 @@ export class AudioRendererWorkletProcessor extends AudioWorkletProcessor {
     this.port.postMessage({ type: "state", state });
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async _onCommand(cmd: AudioRendererWorkletRequest): Promise<any> {
     switch (cmd.type) {
       case "play":
         if (this._state != "disposed") {
           this._reset();
-          this._inputPort = cmd.inputPort!;
-          this._inputPort!.onmessage = (ev) => this._buffer.write(ev.data);
+          if (cmd.inputPort != null) {
+            this._inputPort = cmd.inputPort;
+            this._inputPort.onmessage = (ev) => this._buffer.write(ev.data);
+          }
           this._setState("playing");
         } else {
           console.error("This object has already been disposed.");
@@ -115,9 +120,11 @@ export class AudioRendererWorkletProcessor extends AudioWorkletProcessor {
         }
         return;
       case "seek":
-        this._buffer.seekTo(cmd.seekPos!, cmd.relative);
-        if (this._state == "stopped") {
-          this._setState("playing");
+        if (cmd.seekPos != null) {
+          this._buffer.seekTo(cmd.seekPos, cmd.relative);
+          if (this._state == "stopped") {
+            this._setState("playing");
+          }
         }
         return;
       case "resume":
@@ -141,7 +148,7 @@ export class AudioRendererWorkletProcessor extends AudioWorkletProcessor {
     if (this._state == "disposed") {
       return false;
     }
-    if (this._state == "playing") {
+    if (this._state == "playing" || this._state == "stopped") {
       const res = this._buffer.onAudioWorkletProcess(inputs, outputs);
       this.port.postMessage({
         type: "progress",

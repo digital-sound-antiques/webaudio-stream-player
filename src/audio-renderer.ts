@@ -162,7 +162,10 @@ class WorkletRenderer implements AudioRendererDelegate {
     }
   }
 
-  private _request(req: AudioRendererWorkletRequest, transfer: Transferable[] = []): Promise<unknown> {
+  private _request(
+    req: AudioRendererWorkletRequest,
+    transfer: Transferable[] = []
+  ): Promise<unknown> {
     const seq = this._seq++;
     this._node.port.postMessage({ seq, ...req }, transfer);
     // const start = Date.now();
@@ -307,14 +310,12 @@ class ScriptRenderer implements AudioRendererDelegate {
   }
 
   _onAudioProcess(ev: AudioProcessingEvent) {
-    if (this._state == "playing") {
+    if (this._state == "playing" || this._state == "stopped") {
       const res = this._buffer.onAudioProcess(ev);
       if (this.onprogress != null) {
-        const stat = this._buffer.stat;
         this.onprogress(this._buffer.stat);
       }
       if (!res) {
-        this._buffer.clear();
         this.setState("stopped");
       }
     }

@@ -1,6 +1,7 @@
 export type AudioDecoderRequest = {
   type: AudioDecoderRequestType;
   outputPort?: MessagePort;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   args?: any;
 };
 
@@ -17,25 +18,27 @@ export type AudioDecoderRequestType = "init" | "start" | "abort" | "dispose" | "
 export type AudioDecoderResponse = {
   seq: number;
   type: AudioDecoderRequestType;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   error?: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data?: any;
 };
 
 class InternalProcessor<T> {
-  constructor(id: any, process: (parent: InternalProcessor<T>) => Promise<T>) {
+  constructor(id: number, process: (parent: InternalProcessor<T>) => Promise<T>) {
     this.id = id;
     this._process = process;
   }
 
-  id: any;
+  id: number;
   aborted = false;
 
   _completer: Promise<T> | null = null;
   private _process: (parent: InternalProcessor<T>) => Promise<T>;
 
-  abort(): Promise<T> {
+  abort(): Promise<T> | null {
     this.aborted = true;
-    return this._completer!;
+    return this._completer;
   }
 
   run(): Promise<T> {
@@ -70,17 +73,17 @@ export abstract class AudioDecoderWorker {
 
   private _detachPort() {
     if (this._outputPort != null) {
-      this._outputPort!.onmessage = null;
-      this._outputPort?.close();
+      this._outputPort.onmessage = null;
+      this._outputPort.close();
       this._outputPort = null;
     }
   }
 
-  private _processorId: number = 0;
+  private _processorId = 0;
   private _processor: InternalProcessor<void> | null = null;
 
-  private _sampleRate: number = 44100;
-  private _numberOfChannels: number = 2;
+  private _sampleRate = 44100;
+  private _numberOfChannels = 2;
 
   get sampleRate() {
     return this._sampleRate;
@@ -89,6 +92,7 @@ export abstract class AudioDecoderWorker {
     return this._numberOfChannels;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private async _onRequest(req: AudioDecoderRequest): Promise<any> {
     switch (req.type) {
       case "init":
@@ -100,7 +104,10 @@ export abstract class AudioDecoderWorker {
         if (this._processor != null) {
           throw new Error(`Already started.`);
         }
-        this._outputPort = req.outputPort!;
+        if (req.outputPort == null) {
+          throw new Error('No output port specified.');
+        }
+        this._outputPort = req.outputPort;
         await this.start(req.args);
         this._run();
         return;
@@ -115,7 +122,7 @@ export abstract class AudioDecoderWorker {
         this._detachPort();
         return;
       default:
-        throw new Error(`Uknown request type: ${(req as any).type}`);
+        throw new Error(`Uknown request type: ${req.type}`);
     }
   }
 
@@ -156,13 +163,14 @@ export abstract class AudioDecoderWorker {
 
   private async _abort() {
     if (this._processor != null) {
-      const id = this._processor.id;
       await this._processor.abort();
       this._processor = null;
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   abstract init(args: any): Promise<void>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   abstract start(args: any): Promise<void>;
   abstract process(): Promise<Array<Float32Array | Int32Array | Int16Array> | null>;
   abstract abort(): Promise<void>;

@@ -35,6 +35,8 @@ const emptyProgress = {
     isDecoding: false,
   },
   renderer: {
+    elapsedFrame: 0,
+    elapsedTime: 0,
     currentFrame: 0,
     currentTime: 0,
     bufferedFrames: 0,
@@ -46,6 +48,7 @@ const emptyProgress = {
 interface AudioPlayerEventDetailTypeMap {
   progress: AudioPlayerProgress;
   statechange: AudioPlayerState;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   decodermessage: any;
 }
 
@@ -168,7 +171,7 @@ export class AudioPlayer {
       this._audioContext = context;
       if (this._rendererType == "worklet") {
         if (this._addRendererWorklet != null) {
-          this._addRendererWorklet(this._audioContext!);
+          this._addRendererWorklet(this._audioContext);
         } else if (this._rendererWorkletUrl != null) {
           await this._audioContext.audioWorklet.addModule(this._rendererWorkletUrl);
         } else {
@@ -193,18 +196,28 @@ export class AudioPlayer {
       this.dispatchEvent(this._createCustomEvent("progress", { detail: this._progress }));
   }) as EventListener;
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private _onDecoderMessage = ((ev: CustomEvent<any>): void => {
     this.dispatchEvent(this._createCustomEvent("decodermessage", { detail: ev.detail }));
   }) as EventListener;
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async play(args: any): Promise<void> {
     this._progress = emptyProgress;
 
     const mch = new MessageChannel();
 
-    await this._attachContext(this._destination!.context);
+    if (this._destination == null) {
+      throw new Error('Missing destination');
+    }
 
-    if (this._audioContext?.state == "suspended") {
+    await this._attachContext(this._destination.context);
+
+    if (this._audioContext == null) {
+      throw new Error('Missing AudioContext');
+    }
+
+    if (this._audioContext.state == "suspended") {
       throw new Error(
         "AudioContext is suspended. `await AudioContext.resume()` in advance within the call stack of a UI event handler."
       );
@@ -218,7 +231,7 @@ export class AudioPlayer {
       } else {
         throw new Error("Either decoderWorkerFactoty or decoderWorkerUrl is required.");
       }
-      await this._decoder.init(this._audioContext!.sampleRate, this._numberOfChannels);
+      await this._decoder.init(this._audioContext.sampleRate, this._numberOfChannels);
       this._decoder.addEventListener("decodermessage", this._onDecoderMessage);
     } else {
       await this._decoder.abort();
@@ -230,13 +243,13 @@ export class AudioPlayer {
     if (this._renderer == null) {
       this._renderer = AudioRenderer.create(
         this._rendererType,
-        this._audioContext!,
+        this._audioContext,
         this._numberOfChannels,
         this._rendererWorkletName
       );
       this._renderer.addEventListener("statechange", this._onRendererStateChange);
     }
-    this._renderer.connect(this._destination!);
+    this._renderer.connect(this._destination);
     this._renderer.addEventListener("progress", this._onRendererProgress);
 
     await this._renderer.play(mch.port1);
