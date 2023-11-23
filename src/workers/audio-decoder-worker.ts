@@ -9,6 +9,8 @@ export type AudioDecoderProgress = {
   decodeFrames: number;
   decodeSpeed: number;
   isDecoding: boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  status?: any;
 };
 
 export type AudioDecoderRequestWithSeq = { seq: number } & AudioDecoderRequest;
@@ -67,8 +69,10 @@ export abstract class AudioDecoderWorker {
   }
 
   private _worker: Worker;
-  get worker() { return this._worker; }
-  
+  get worker() {
+    return this._worker;
+  }
+
   private _outputPort: MessagePort | null = null;
 
   private _detachPort() {
@@ -105,7 +109,7 @@ export abstract class AudioDecoderWorker {
           throw new Error(`Already started.`);
         }
         if (req.outputPort == null) {
-          throw new Error('No output port specified.');
+          throw new Error("No output port specified.");
         }
         this._outputPort = req.outputPort;
         await this.start(req.args);
@@ -126,7 +130,13 @@ export abstract class AudioDecoderWorker {
     }
   }
 
-  private _dispatchProgress(elapsed: number, decodeFrames: number, isDecoding: boolean) {
+  private _dispatchProgress(
+    elapsed: number,
+    decodeFrames: number,
+    isDecoding: boolean,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    status: any
+  ) {
     const decodeSpeed = elapsed != 0 ? ((decodeFrames / this.sampleRate) * 1000) / elapsed : 0;
     this._worker.postMessage({
       type: "progress",
@@ -134,6 +144,7 @@ export abstract class AudioDecoderWorker {
         decodeFrames,
         decodeSpeed,
         isDecoding,
+        status,
       },
     });
   }
@@ -152,12 +163,12 @@ export abstract class AudioDecoderWorker {
           this._outputPort?.postMessage(null);
           break;
         }
-        this._dispatchProgress(Date.now() - start, decodeFrames, true);
+        this._dispatchProgress(Date.now() - start, decodeFrames, true, this.status());
         await new Promise((resolve) => setTimeout(resolve, 0));
       }
     });
     await this._processor.run();
-    this._dispatchProgress(Date.now() - start, decodeFrames, false);
+    this._dispatchProgress(Date.now() - start, decodeFrames, false, this.status());
     this._processor = null;
   }
 
@@ -166,6 +177,10 @@ export abstract class AudioDecoderWorker {
       await this._processor.abort();
       this._processor = null;
     }
+  }
+
+  status() {
+    return undefined;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

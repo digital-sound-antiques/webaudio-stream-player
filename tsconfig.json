@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES6",
-    "module": "ES2020",
+    "module": "Node16",
     "declaration": true,
     "outDir": "./dist",
     "rootDir": "./src",

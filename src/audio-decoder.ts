@@ -21,7 +21,7 @@ export class AudioDecoder extends EventTarget {
 
   private _handleMessage(ev: MessageEvent) {
     if (ev.data?.type == "progress") {
-      this.dispatchEvent(new CustomEvent("progress", { detail: ev.data }));
+      this.dispatchEvent(new CustomEvent("progress", { detail: ev.data.data }));
       return;
     }
 
